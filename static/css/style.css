@@ -51,7 +51,7 @@
 
 /* chat bot area */
 #chat-bot {
-    position: absolute;
+    position: fixed;
     bottom: 20px;
     right: 20px;
 }
@@ -62,6 +62,7 @@
     border-radius: 50%;
     background-color: white;
     overflow: hidden;
+    transition: 0.3s ease-out;
     /* display: none; */
 }
 
@@ -220,4 +221,23 @@
 
 #chat-bot #chat-area #chat-input input:active {
     border: none;
+}
+
+/* view area */
+
+#view {
+    padding: 40px;
+}
+
+#view #books {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: start;
+}
+
+#view #books #book {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }

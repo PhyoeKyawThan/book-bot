@@ -1,2 +1,6 @@
 venv/
 __pycache__/
+file.html
+models/
+*.json
+*.py

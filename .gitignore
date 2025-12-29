@@ -1,6 +1,12 @@
 venv/
 __pycache__/
+book_covers/
 file.html
+assets/
 models/
-*.json
-*.py
+static/images/covers/*.py
+BookAPI.py
+book.json
+bookCoverUpdater.py
+dependencies.py
+file.html

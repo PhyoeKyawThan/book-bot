@@ -1,0 +1,63 @@
+<!-- bot area -->
+<div id="chat-bot">
+    <div id="icon">
+        <img src="/static/images/icon.png" alt="" srcset="">
+    </div>
+    <div id="chat-area">
+        <div id="close-chat-area">
+            X
+        </div>
+        <div id="chat-heading">
+            <div id="chat-avatar">
+                <img src="/static/images/icon.png" alt="" srcset="">
+            </div>
+            <div id="chat-bot-name">
+                <div>Book Bot</div>
+                <div id="status" class="status-active">Active</div>
+            </div>
+        </div>
+        <div id="chat-conversation">
+            <div id="message-from-bot">
+                <div id="avatar">
+                    <img src="/static/images/icon.png" alt="" srcset="">
+                </div>
+                <div id="message">
+                    Hello there, What can I help for you?<br>
+                    <b>Frequent questions.. </b><br>
+                    <ul>
+                        <li>Is it able to buy with COD (Cash On Delivery)?</li>
+                        <li>How long does it take to deliver?</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="message-from-client">
+                <div id="client-icon">
+                    <img src="/static/images/client_icon.png" alt="" srcset="">
+                </div>
+                <div id="message">Who are u?Lore</div>
+            </div>
+        </div>
+        <div id="chat-input">
+            <input type="text" name="" id="" placeholder="What can I help you, today?">
+            <button type="button">
+                <img src="/static/images/paper-plane.png" alt="" srcset="">
+            </button>
+        </div>
+    </div>
+</div>
+<!-- bot area end -->
+<script src="{{ url_for('static', filename="js/socket.io.js" )}}"></script>
+<script>
+    const socket = io("/bot");
+
+    socket.on("connect", () => {
+        console.log("Connected, socket id:", socket.id);
+        socket.send("Hello Server");
+    });
+
+    socket.on("message", (data) => {
+        console.log("Received:", data);
+    });
+
+</script>

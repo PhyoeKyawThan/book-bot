@@ -1,10 +1,15 @@
 from flask import Flask, render_template, jsonify
 import json
 import os
+from flask_socketio import SocketIO
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = "it'sasecret"
+socket = SocketIO(app=app)
+
 books = []
 cache_search = {} 
+
 if(len(books) <= 0):
     with open("books.json", "r") as f:
         books = json.loads(f.read())
@@ -38,6 +43,7 @@ def cache_search_or_save(book_id: int):
         json.dump(temp, f)
     return result
 
+# routes
 @app.route("/")
 def index():
     global books
@@ -56,3 +62,8 @@ def view(id: int):
         # "book": book
     }
     return render_template("book_view.html", template_data = template_data, book = book)
+
+@socket.on("message", namespace="/bot")
+def handle_message(data):
+    print("Client says:", data)
+    socket.send("Hello From Server", namespace="/bot")

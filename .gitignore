@@ -10,3 +10,6 @@ book.json
 bookCoverUpdater.py
 dependencies.py
 file.html
+static/node_modules/
+static/package-lock.json
+static/package.json

@@ -35,6 +35,16 @@
         margin-bottom: 10px;
     }
 
+    .price-badge{
+        padding: 8px;
+        background-color: green;
+        width: fit-content;
+        color: var(--primary-background-light);
+        font-weight: bolder;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+
     .section {
         margin-bottom: 15px;
     }
@@ -53,12 +63,11 @@
 <div id="view">
     <div class="book-container">
         <div class="book-cover">
-            <img src="{{ url_for('static', filename='images/covers/'+book.cover) }}" alt="{{ book.title }}">
+            <img src="{{ book.formats['image/jpeg']  }}" alt="{{ book.title }}">
         </div>
 
         <div class="book-details">
-            <h1 class="book-title">{{ book.title }}</h1>
-
+            <h1 class="book-title">{{ book.title }} <span class="price-badge">Price: {{ book.price }} MMKS</span></h1>
             <div class="section">
                 <strong>Author{{ book.authors|length > 1 and 's' or '' }}:</strong>
                 <ul class="author-list">
@@ -80,14 +89,12 @@
             </div>
             {% endif %}
 
-            {% for summary in book.summaries %}
             <div class="section">
                 <strong>Summary:</strong>
                 <p class="summary-text">
-                    {{ summary }}
+                    {{ book.summary }}
                 </p>
             </div>
-            {% endfor %}
         </div>
     </div>
 </div>

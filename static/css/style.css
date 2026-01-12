@@ -151,30 +151,30 @@
 
 
 
-#chat-bot #chat-area #chat-conversation #message-from-bot,
-#chat-bot #chat-area #chat-conversation #message-from-client {
+#chat-bot #chat-area #chat-conversation .message-from-bot,
+#chat-bot #chat-area #chat-conversation .message-from-client {
     display: flex;
     flex-direction: row;
     gap: 5px;
     margin: 10px auto;
 }
 
-#chat-bot #chat-area #chat-conversation #message-from-client {
+#chat-bot #chat-area #chat-conversation .message-from-client {
     flex-direction: row-reverse;
 }
 
-#chat-bot #chat-area #chat-conversation #message-from-bot #avatar img,
-#client-icon img {
+#chat-bot #chat-area #chat-conversation .message-from-bot .avatar img,
+.client-icon img {
     width: 20px;
     height: 20px;
     border-radius: 50%;
     background-color: white;
 }
 
-#chat-bot #chat-area #chat-conversation #message-from-bot #message,
-#message-from-client #message {
+#chat-bot #chat-area #chat-conversation .message-from-bot .message,
+.message-from-client .message {
     text-align: justify;
-    max-width: 350px;
+    max-width: 300px;
     padding: 8px;
     background-color: var(--primary-background-light);
 }

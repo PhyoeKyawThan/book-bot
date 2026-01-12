@@ -17,11 +17,11 @@
             </div>
         </div>
         <div id="chat-conversation">
-            <div id="message-from-bot">
-                <div id="avatar">
+            <div class="message-from-bot">
+                <div class="avatar">
                     <img src="/static/images/icon.png" alt="" srcset="">
                 </div>
-                <div id="message">
+                <div class="message">
                     Hello there, What can I help for you?<br>
                     <b>Frequent questions.. </b><br>
                     <ul>
@@ -31,33 +31,87 @@
                 </div>
             </div>
 
-            <div id="message-from-client">
-                <div id="client-icon">
+            <div class="message-from-client">
+                <div class="client-icon">
                     <img src="/static/images/client_icon.png" alt="" srcset="">
                 </div>
-                <div id="message">Who are u?Lore</div>
+                <div class="message">Who are u?Lore</div>
             </div>
         </div>
         <div id="chat-input">
-            <input type="text" name="" id="" placeholder="What can I help you, today?">
-            <button type="button">
+            <input type="text" name="" id="chat-input-box" placeholder="What can I help you, today?">
+            <button type="button" id="send-btn">
                 <img src="/static/images/paper-plane.png" alt="" srcset="">
             </button>
         </div>
     </div>
 </div>
 <!-- bot area end -->
-<script src="{{ url_for('static', filename="js/socket.io.js" )}}"></script>
+<script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
 <script>
     const socket = io("/bot");
+    const input = document.getElementById("chat-input-box");
+    const btn = document.getElementById("send-btn");
+    const conversation = document.getElementById("chat-conversation");
+
+    btn.addEventListener("click", () => {
+        if (input.value.trim() !== "") {
+            sendMessage(input.value);
+            input.value = "";
+        }
+    });
+
+    input.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") {
+            btn.click();
+        }
+    });
 
     socket.on("connect", () => {
-        console.log("Connected, socket id:", socket.id);
-        socket.send("Hello Server");
+        console.log("Connected:", socket.id);
     });
 
     socket.on("message", (data) => {
-        console.log("Received:", data);
+        console.log("Bot:", data.response);
+        addBotMessage(data.response);
     });
+
+    function sendMessage(text) {
+        socket.send({
+            message: text
+        });
+        addClientMessage(text);
+    }
+
+    function addClientMessage(text) {
+        const div = document.createElement("div");
+        div.className = "message-from-client";
+        div.innerHTML = `<div class="client-icon">
+                    <img src="/static/images/client_icon.png" alt="" srcset="">
+                </div>
+                <div class="message">${text}</div>`;
+        conversation.appendChild(div);
+        conversation.scrollTo({
+            top: conversation.scrollHeight,
+            behavior: "smooth"
+        });
+    }
+
+    function addBotMessage(text) {
+        const div = document.createElement("div");
+        div.className = "message-from-bot";
+        div.innerHTML = `
+                <div class="avatar">
+                    <img src="/static/images/icon.png" alt="" srcset="">
+                </div>
+                <div class="message">
+                    ${text}
+                </div>`;
+        conversation.appendChild(div);
+        conversation.scrollTo({
+            top: conversation.scrollHeight,
+            behavior: "smooth"
+        });
+    }
 
 </script>

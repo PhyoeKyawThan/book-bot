@@ -71,7 +71,11 @@ def handle_message(data):
             "response": "Invalid message format."
         })
         return
-
+    emit("message", {
+        "is_typing": True,
+        "response": "Typing...",
+        "timestamp": datetime.now().isoformat()
+    })
     user_input = data["message"]
     bot_response = chatbot.generate_response(user_input)
 

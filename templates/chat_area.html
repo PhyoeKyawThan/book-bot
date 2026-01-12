@@ -53,6 +53,7 @@
     const input = document.getElementById("chat-input-box");
     const btn = document.getElementById("send-btn");
     const conversation = document.getElementById("chat-conversation");
+    const status = document.getElementById("status");
 
     btn.addEventListener("click", () => {
         if (input.value.trim() !== "") {
@@ -68,12 +69,26 @@
     });
 
     socket.on("connect", () => {
-        console.log("Connected:", socket.id);
+        if (socket.id.length > 0) {
+            status.classList.remove("status-offline");
+            status.classList.add("status-active");
+            status.innerText = "Active";
+        }
     });
 
+    socket.on("disconnect", () => {
+        status.classList.add("status-offline");
+        status.classList.remove("status-active");
+        status.innerText = "Offline";
+    })
+
     socket.on("message", (data) => {
-        console.log("Bot:", data.response);
-        addBotMessage(data.response);
+        if (data.is_typing) {
+            addTyping();
+        } else {
+            removeTyping();
+            addBotMessage(data.response);
+        }
     });
 
     function sendMessage(text) {
@@ -97,7 +112,29 @@
         });
     }
 
-    function addBotMessage(text) {
+    function addTyping() {
+        const div = document.createElement("div");
+        div.id = "typing";
+        div.className = "message-from-bot typing";
+        div.innerHTML = `
+                <div class="avatar">
+                    <img src="/static/images/icon.png" alt="" srcset="">
+                </div>
+                <div class="message">
+                    Typing...
+                </div>`;
+        conversation.appendChild(div);
+        conversation.scrollTo({
+            top: conversation.scrollHeight,
+            behavior: "smooth"
+        });
+    }
+
+    function removeTyping() {
+        document.getElementById("typing").remove();
+    }
+
+    function addBotMessage(text, isTyping) {
         const div = document.createElement("div");
         div.className = "message-from-bot";
         div.innerHTML = `

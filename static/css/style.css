@@ -134,6 +134,10 @@
     color: green;
 }
 
+#chat-bot #chat-area #chat-heading #chat-bot-name .status-offline {
+    color: rgb(90, 115, 90);
+}
+
 
 
 #chat-bot #chat-area #chat-heading #chat-avatar img {
@@ -158,6 +162,7 @@
     gap: 5px;
     margin: 10px auto;
 }
+
 
 #chat-bot #chat-area #chat-conversation .message-from-client {
     flex-direction: row-reverse;

@@ -6,6 +6,7 @@ from nltk.corpus import stopwords
 from db import get_db
 from models.book import Book
 from nltk.stem import WordNetLemmatizer
+from flask import session
 
 # Download NLTK data (run once)
 try:
@@ -35,6 +36,15 @@ class BookChatbot:
             'recommendation': ['recommend', 'suggest', 'similar', 'like', 'best', 'top'],
             'rating': ['rating', 'review', 'score', 'stars', 'popular']
         }
+
+        self.intent_keywords.update({
+            'identity': ['who are you', 'who r u', 'what are you', 'your name'],
+            'capabilities': ['what can you do', 'help', 'features', 'abilities'],
+            'creator': ['who made you', 'who created you', 'developer'],
+            'goodbye': ['bye', 'goodbye', 'see you', 'exit']
+        })
+
+        
         
         self.greeting_patterns = [
             r'hello', r'hi', r'hey', r'greetings', r'good morning', r'good afternoon'
@@ -109,15 +119,19 @@ class BookChatbot:
         
         return None
 
-    def detect_intent(self, tokens: List[str]) -> List[str]:
-        """Detect multiple intents from user query"""
-        detected_intents = []
-        
+    def detect_intent(self, tokens: List[str], raw_text: str = "") -> List[str]:
+        detected = []
+
+        joined = " ".join(tokens)
+
         for intent, keywords in self.intent_keywords.items():
-            if any(keyword in tokens for keyword in keywords):
-                detected_intents.append(intent)
-        
-        return detected_intents if detected_intents else ['general']
+            for kw in keywords:
+                if kw in raw_text or kw in joined:
+                    detected.append(intent)
+                    break
+
+        return detected if detected else ['general']
+
 
     def generate_price_response(self, book: Book) -> str:
         """Generate response for price inquiries"""
@@ -242,7 +256,11 @@ class BookChatbot:
         
         # Extract book from query
         book = self.extract_book_from_query(user_input)
-        
+        if book:
+            session['last_book_id'] = book.id
+
+        if 'last_book_id' in session:
+            book = Book.get_by_id(int(session['last_book_id']))
         if not book:
             # No book found - offer general help
             if 'recommend' in user_input or 'suggest' in user_input:
@@ -274,6 +292,14 @@ class BookChatbot:
                 responses.append(f"'{book.title}' is written by {book.authors[0]['name']}.")
             elif intent == 'genre':
                 responses.append(f"'{book.title}' falls under: {', '.join(book.subjects[:3])}.")
+            elif intent == 'identity':
+                responses.append(self.identity_response())
+            elif intent == 'capabilities':
+                responses.append(self.capabilities_response())
+            elif intent == 'creator':
+                responses.append(self.creator_response())
+            elif intent == 'goodbye':
+                responses.append(self.goodbye_response())
             elif intent == 'rating':
                 if book.rating > 0:
                     responses.append(f"'{book.title}' has a rating of {book.rating}/5.")
@@ -291,5 +317,26 @@ class BookChatbot:
             return responses[0]
         else:
             return "Here's what I found:\n" + "\n".join(f"• {response}" for response in responses)
+        
+    def identity_response(self):
+        return "I’m a virtual book assistant. I help you find books, prices, descriptions, and recommendations."
+
+    def capabilities_response(self):
+        return (
+            "I can help you with:\n"
+            "• Book prices\n"
+            "• Descriptions & summaries\n"
+            "• Availability & formats\n"
+            "• Recommendations\n"
+            "Just ask about a book!"
+        )
+
+    def creator_response(self):
+        return "I was created by the development team to help users explore books easily."
+
+    def goodbye_response(self):
+        session.pop('last_book_id', None)
+        return "Goodbye! 📚 Feel free to come back anytime."
+
 
 

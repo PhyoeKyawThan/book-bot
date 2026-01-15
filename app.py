@@ -57,6 +57,13 @@ def view(id: int):
     }
     return render_template("book_view.html", template_data = template_data, book = book)
 
+@socket.on("chat_open", namespace="/bot")
+def chat_open():
+    print("it was here")
+    emit("chat_init", {
+        "response": chatbot.capabilities_response()
+    })
+
 @socket.on("message", namespace="/bot")
 def handle_message(data):
     """
@@ -122,7 +129,6 @@ def search_books():
             ]
         })
     else:
-        # Suggest alternative books
         db = get_db()
         cursor = db.execute(
             "SELECT * FROM books WHERE title LIKE ? OR authors LIKE ? LIMIT 5",

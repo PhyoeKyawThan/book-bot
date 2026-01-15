@@ -14,6 +14,7 @@ class Book:
         languages: Optional[List[str]] = None,
         formats: Optional[Dict] = None,
         price: Optional[int] = None,
+        cover: Optional[str] = None,
         stock: Optional[int] = None
     ):
         self.id = id
@@ -24,6 +25,7 @@ class Book:
         self.languages = languages or []
         self.formats = formats or {}
         self.price = price or 0
+        self.cover = cover or ""
         self.stock = stock or 0
 
     @classmethod
@@ -42,6 +44,7 @@ class Book:
             languages=book_dict.get("languages", []),
             formats=book_dict.get("formats", {}),
             price=book_dict.get("price", 0),
+            cover=book_dict.get("cover", ""),
             stock=book_dict.get("stock", 0)
         )
 
@@ -55,8 +58,8 @@ class Book:
         db = get_db()
         
         cursor = db.execute('''
-            INSERT INTO books (title, summary, authors, subjects, languages, formats, price, stock)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO books (title, summary, authors, subjects, languages, formats, price, cover, stock)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             book.title,
             book.summary,
@@ -65,6 +68,7 @@ class Book:
             json.dumps(book.languages),
             json.dumps(book.formats),
             book.price,
+            book.cover,
             book.stock
         ))
         
@@ -184,6 +188,7 @@ class Book:
             languages=json.loads(row['languages']) if row['languages'] else [],
             formats=json.loads(row['formats']) if row['formats'] else {},
             price=row['price'],
+            cover=row['cover'],
             stock=row['stock']
         )
 
@@ -198,6 +203,7 @@ class Book:
             'languages': self.languages,
             'formats': self.formats,
             'price': self.price,
+            'cover': self.cover,
             'stock': self.stock
         }
     def calculate_shipping_time(self) -> str:

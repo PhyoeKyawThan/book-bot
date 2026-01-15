@@ -17,7 +17,7 @@
             </div>
         </div>
         <div id="chat-conversation">
-            <div class="message-from-bot">
+            <!-- <div class="message-from-bot">
                 <div class="avatar">
                     <img src="/static/images/icon.png" alt="" srcset="">
                 </div>
@@ -36,7 +36,7 @@
                     <img src="/static/images/client_icon.png" alt="" srcset="">
                 </div>
                 <div class="message">Who are u?Lore</div>
-            </div>
+            </div> -->
         </div>
         <div id="chat-input">
             <input type="text" name="" id="chat-input-box" placeholder="What can I help you, today?">
@@ -65,6 +65,7 @@
     closeBtn.addEventListener("click", () => {
         chatIcon.style.display = "block";
         chatArea.style.display = "none";
+        chat_socket.close();
     })
 
     chatIcon.addEventListener("click", (e) => {
@@ -77,6 +78,7 @@
     document.addEventListener("click", () => {
         chatIcon.style.display = "block";
         chatArea.style.display = "none";
+        chat_socket.close();
     });
 
     chatArea.addEventListener("click", (e) => {

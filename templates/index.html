@@ -4,7 +4,7 @@
     {% for book in template_data.books %}
     <div class="book" id="book-{{ book.id }}">
         <div class="cover">
-            <img src="{{ book.formats['image/jpeg']  }}" alt="" srcset="">
+            <img src="{{ url_for('static', filename='images/covers/' + book.cover) }}" alt="" srcset="">
         </div>
         <a class="title" href="{{ url_for('view', id = book.id) }}">{{ book.title }}</a>
         <div class="authors">

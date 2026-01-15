@@ -4,8 +4,10 @@ const chat_socket = {
         if (!this.socket.connected) {
             this.socket.connect();
         }
+        this.socket.once("connect", () => {
+            this.socket.emit("chat_open");
+        });
     },
-
     close() {
         if (this.socket.connected) {
             this.socket.disconnect();
@@ -27,9 +29,14 @@ const chat_socket = {
     },
 
     onMessage(callback) {
+
         this.socket.on("message", (data) => {
             callback(data);
         });
+
+        this.socket.on("chat_init", (data)=>{
+            callback(data);
+        })
     },
 
     sendMessage(text) {

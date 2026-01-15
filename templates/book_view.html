@@ -63,7 +63,7 @@
 <div id="view">
     <div class="book-container">
         <div class="book-cover">
-            <img src="{{ book.formats['image/jpeg']  }}" alt="{{ book.title }}">
+            <img src="{{ url_for('static', filename='images/covers/' + book.cover) }}" alt="{{ book.title }}">
         </div>
 
         <div class="book-details">

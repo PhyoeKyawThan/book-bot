@@ -29,6 +29,7 @@ def init_db(callback: any = None):
             languages TEXT, -- JSON array
             formats TEXT,   -- JSON object
             price INT, 
+            cover TEXT,
             stock INT
         )
     ''')

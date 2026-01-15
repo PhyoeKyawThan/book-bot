@@ -3,7 +3,7 @@ __pycache__/
 book_covers/
 file.html
 assets/
-models/
+# models/
 static/images/covers/*.py
 BookAPI.py
 book.json

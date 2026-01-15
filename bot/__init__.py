@@ -28,7 +28,7 @@ class BookChatbot:
         self.intent_keywords = {
             'price': ['price', 'cost', 'worth', 'expensive', 'cheap', 'money', 'buy', 'purchase'],
             'shipping': ['ship', 'delivery', 'arrive', 'deliver', 'mail', 'time', 'when'],
-            'description': ['about', 'description', 'detail', 'tell', 'what', 'summary', 'synopsis'],
+            'description': ['about', 'description', 'detail', 'tell', 'what', 'summary', 'synopsis', 'yes'],
             'availability': ['available', 'stock', 'inventory', 'have', 'get', 'find'],
             'formats': ['format', 'kindle', 'ebook', 'pdf', 'epub', 'hardcover', 'paperback'],
             'author': ['author', 'writer', 'written', 'by who', 'who wrote'],

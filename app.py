@@ -51,7 +51,6 @@ def index():
 @app.route("/book/<int:id>/view")
 def view(id: int):
     book = Book.get_by_id(id)
-    print(book.to_dict())
     template_data = {
         "title": book.title,
         # "book": book

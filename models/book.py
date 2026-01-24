@@ -15,7 +15,8 @@ class Book:
         formats: Optional[Dict] = None,
         price: Optional[int] = None,
         cover: Optional[str] = None,
-        stock: Optional[int] = None
+        stock: Optional[int] = None,
+        rating: Optional[float] = None,
     ):
         self.id = id
         self.title = title
@@ -27,6 +28,7 @@ class Book:
         self.price = price or 0
         self.cover = cover or ""
         self.stock = stock or 0
+        self.rating = rating
 
     @classmethod
     def toBook(cls, book_dict: dict) -> "Book":
@@ -45,7 +47,8 @@ class Book:
             formats=book_dict.get("formats", {}),
             price=book_dict.get("price", 0),
             cover=book_dict.get("cover", ""),
-            stock=book_dict.get("stock", 0)
+            stock=book_dict.get("stock", 0),
+            rating=book_dict.get("rating", 0.0)
         )
 
     def __str__(self):
@@ -58,8 +61,8 @@ class Book:
         db = get_db()
         
         cursor = db.execute('''
-            INSERT INTO books (title, summary, authors, subjects, languages, formats, price, cover, stock)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO books (title, summary, authors, subjects, languages, formats, price, cover, stock, rating)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
             book.title,
             book.summary,
@@ -69,7 +72,8 @@ class Book:
             json.dumps(book.formats),
             book.price,
             book.cover,
-            book.stock
+            book.stock,
+            book.rating
         ))
         
         db.commit()
@@ -140,7 +144,7 @@ class Book:
         
         cursor = db.execute('''
             UPDATE books 
-            SET title = ?, summary = ?, authors = ?, subjects = ?, languages = ?, formats = ?, stock = ?, price = ?
+            SET title = ?, summary = ?, authors = ?, subjects = ?, languages = ?, formats = ?, stock = ?, price = ?, rating = ?
             WHERE id = ?
         ''', (
             book.title,
@@ -149,6 +153,7 @@ class Book:
             json.dumps(book.subjects),
             json.dumps(book.languages),
             json.dumps(book.formats),
+            json.dumps(book.rating),
             book.id
         ))
         
@@ -189,7 +194,8 @@ class Book:
             formats=json.loads(row['formats']) if row['formats'] else {},
             price=row['price'],
             cover=row['cover'],
-            stock=row['stock']
+            stock=row['stock'],
+            rating=row['rating']
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -204,7 +210,8 @@ class Book:
             'formats': self.formats,
             'price': self.price,
             'cover': self.cover,
-            'stock': self.stock
+            'stock': self.stock,
+            'rating': self.rating
         }
     def calculate_shipping_time(self) -> str:
         """Calculate shipping time based on stock and formats"""

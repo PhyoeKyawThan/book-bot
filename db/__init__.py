@@ -30,7 +30,8 @@ def init_db(callback: any = None):
             formats TEXT,   -- JSON object
             price INT, 
             cover TEXT,
-            stock INT
+            stock INT,
+            rating INT
         )
     ''')
     if callback:

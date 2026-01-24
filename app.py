@@ -1,5 +1,5 @@
 from flask import Flask, render_template, jsonify, request
-from helpers import get_books_from_json, generate_random_price_and_stock
+from helpers import get_books_from_json, generate_random_rating,generate_random_price_and_stock
 from models.book import Book
 from flask_socketio import SocketIO, emit
 from bot import BookChatbot
@@ -25,6 +25,7 @@ def check_data_exists_or_insert_books() -> None:
             random_price_stock = generate_random_price_and_stock((10000, 50000), (50, 100))
             book.price = random_price_stock.get('price')
             book.stock = random_price_stock.get('stock')
+            book.rating = generate_random_rating()
             print(random_price_stock)
             book_id = Book.create(book)
             print(f"Book '{book.title}' created with ID: {book_id}")

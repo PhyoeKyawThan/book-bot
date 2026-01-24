@@ -69,6 +69,7 @@
         <div class="book-details">
             <h1 class="book-title">{{ book.title }} <span class="price-badge">Price: {{ book.price }} MMKS</span></h1>
             <div class="section">
+                <div><strong>Rating: {{ book.rating }}</strong></div>
                 <strong>Author{{ book.authors|length > 1 and 's' or '' }}:</strong>
                 <ul class="author-list">
                     {% for author in book.authors %}

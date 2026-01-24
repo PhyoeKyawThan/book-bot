@@ -48,3 +48,7 @@ def generate_random_price_and_stock(price_range: set, stock_range: set) -> dict:
         "price": price,
         "stock": stock
     }
+
+def generate_random_rating() -> float:
+    value = random.uniform(0.0, 5.0)
+    return round(value, 1)

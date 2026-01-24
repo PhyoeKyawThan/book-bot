@@ -13,10 +13,13 @@ try:
     nltk.data.find('tokenizers/punkt')
     nltk.data.find('corpora/stopwords')
     nltk.data.find('corpora/wordnet')
+    nltk.data.find('punkt_tab')
 except LookupError:
     nltk.download('punkt')
     nltk.download('stopwords')
     nltk.download('wordnet')
+    nltk.download('punkt_tab')
+
 
 # Initialize NLTK tools
 stop_words = set(stopwords.words('english'))
@@ -39,7 +42,7 @@ class BookChatbot:
 
         self.intent_keywords.update({
             'identity': ['who are you', 'who r u', 'what are you', 'your name'],
-            'capabilities': ['what can you do', 'help', 'features', 'abilities'],
+            'capabilities': ['what can you do', 'help', 'features', 'abilities', 'looking', 'look', 'for'],
             'creator': ['who made you', 'who created you', 'developer'],
             'goodbye': ['bye', 'goodbye', 'see you', 'exit']
         })
@@ -258,7 +261,9 @@ class BookChatbot:
         book = self.extract_book_from_query(user_input)
         if book:
             session['last_book_id'] = book.id
-
+        # Preprocess and detect intents
+        tokens = self.preprocess_text(user_input)
+        intents = self.detect_intent(tokens)
         if 'last_book_id' in session:
             book = Book.get_by_id(int(session['last_book_id']))
         if not book:
@@ -268,11 +273,9 @@ class BookChatbot:
             elif 'help' in user_input:
                 return "I can help you with: finding books, prices, descriptions, shipping info, and recommendations. Try asking about a specific book!"
             else:
+                for intent in intents:
+                    return self.capabilities_response()
                 return "I couldn't find that book in our collection. Could you please specify the title, author, or genre?"
-        
-        # Preprocess and detect intents
-        tokens = self.preprocess_text(user_input)
-        intents = self.detect_intent(tokens)
         
         # Generate responses for each detected intent
         responses = []

@@ -1,49 +1,59 @@
 const chat_socket = {
     socket: null,
-    open() {
-        if (!this.socket.connected) {
-            this.socket.connect();
-        }
-        this.socket.once("connect", () => {
-            this.socket.emit("chat_open");
+    
+    init: function() {
+        this.socket = io("/bot", {
+            autoConnect: false,
+            reconnection: true,
+            reconnectionAttempts: 5,
+            reconnectionDelay: 1000
         });
     },
-    close() {
-        if (this.socket.connected) {
+    
+    open: function() {
+        if (this.socket) {
+            this.socket.connect();
+        }
+    },
+    
+    close: function() {
+        if (this.socket && this.socket.connected) {
             this.socket.disconnect();
         }
     },
-
-    onConnect(callback) {
-        this.socket.on("connect", () => {
-            statusActive();
-            callback?.();
-        });
+    
+    onConnect: function(callback) {
+        if (this.socket) {
+            this.socket.on('connect', callback);
+        }
     },
-
-    onDisconnect(callback) {
-        this.socket.on("disconnect", () => {
-            statusDisconnected();
-            callback?.();
-        });
+    
+    onDisconnect: function(callback) {
+        if (this.socket) {
+            this.socket.on('disconnect', callback);
+        }
     },
-
-    onMessage(callback) {
-
-        this.socket.on("message", (data) => {
-            callback(data);
-        });
-
-        this.socket.on("chat_init", (data)=>{
-            callback(data);
-        })
+    
+    onMessage: function(callback) {
+        if (this.socket) {
+            this.socket.on('message', callback);
+        }
     },
-
-    sendMessage(text) {
-        if (!this.socket.connected) return;
-
-        this.socket.send({
-            message: text
-        });
+    
+    sendMessage: function(message) {
+        if (this.socket && this.socket.connected) {
+            this.socket.emit('message', { message: message });
+        } else {
+            console.warn('Socket not connected. Message not sent.');
+            addBotMessage("Connection lost. Please reopen the chat.");
+        }
+    },
+    
+    reconnect: function() {
+        if (this.socket && !this.socket.connected) {
+            this.socket.connect();
+        }
     }
 };
+
+chat_socket.init();

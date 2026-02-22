@@ -1,6 +1,8 @@
 import nltk
 import re
 import random
+import json
+import time
 from typing import List, Dict, Optional, Tuple
 from nltk.tokenize import word_tokenize, sent_tokenize
 from nltk.corpus import stopwords
@@ -98,6 +100,39 @@ class BookChatbot:
             'rating': "I can tell you how other readers have rated books."
         }
 
+    def get_session_history(self) -> List[Dict]:
+        """Retrieve conversation history from session"""
+        if 'chat_history' not in session:
+            session['chat_history'] = []
+        return session['chat_history']
+
+    def add_to_history(self, role: str, message: str):
+        """Add a message to conversation history"""
+        history = self.get_session_history()
+        history.append({
+            'role': role,
+            'message': message,
+            'timestamp': time.time()
+        })
+        if len(history) > 20:
+            history = history[-20:]
+        session['chat_history'] = history
+        session.modified = True
+
+    def get_context(self) -> str:
+        """Get conversation context from history"""
+        history = self.get_session_history()
+        if len(history) < 2:
+            return ""
+        
+        recent = history[-6:] if len(history) > 6 else history
+        context = []
+        for entry in recent:
+            role = "User" if entry['role'] == 'user' else "Bot"
+            context.append(f"{role}: {entry['message']}")
+        
+        return "\n".join(context[-3:]) 
+
     def preprocess_text(self, text: str) -> List[str]:
         text = text.lower()
         tokens = word_tokenize(text)
@@ -156,6 +191,10 @@ class BookChatbot:
         joined = " ".join(tokens)
         raw_lower = raw_text.lower()
 
+        context = self.get_context()
+        if "what about" in raw_lower and "last_book_id" in session:
+            detected.append('description')
+        
         for intent, keywords in self.intent_keywords.items():
             for kw in keywords:
                 if kw in raw_lower or kw in joined:
@@ -348,6 +387,8 @@ class BookChatbot:
             return random.choice(self.thanks_responses)
         
         if any(word in user_input_lower for word in ['bye', 'goodbye', 'exit', 'quit', 'see you']):
+            session.pop('chat_history', None)
+            session.pop('last_book_id', None)
             return random.choice(self.goodbye_responses)
         
         if any(phrase in user_input_lower for phrase in ['who are you', 'what are you', 'your name']):
@@ -365,8 +406,11 @@ class BookChatbot:
     def generate_response(self, user_input: str) -> str:
         user_input = user_input.strip()
         
+        self.add_to_history('user', user_input)
+        
         general_response = self.handle_general_conversation(user_input)
         if general_response:
+            self.add_to_history('bot', general_response)
             return general_response
         
         book = self.extract_book_from_query(user_input)
@@ -374,22 +418,27 @@ class BookChatbot:
             session['last_book_id'] = book.id
         
         if 'last_book_id' in session and not book:
-            book = Book.get_by_id(int(session['last_book_id']))
+            context = self.get_context()
+            if any(word in user_input.lower() for word in ['it', 'this', 'that', 'the book']):
+                book = Book.get_by_id(int(session['last_book_id']))
         
         tokens = self.preprocess_text(user_input)
         intents = self.detect_intent(tokens, user_input)
         
         if not book:
             if any(intent in ['recommendation', 'general'] for intent in intents):
-                return self.generate_recommendation_response()
+                response = self.generate_recommendation_response()
             elif any(intent in ['capabilities', 'help'] for intent in intents):
-                return self.capabilities_response()
+                response = self.capabilities_response()
             else:
                 responses = [
                     f"I couldn't find that book. Did you mean one of these? {self.suggest_books_from_query(user_input)}",
                     random.choice(self.no_book_found_responses)
                 ]
-                return random.choice(responses)
+                response = random.choice(responses)
+            
+            self.add_to_history('bot', response)
+            return response
         
         responses = []
         
@@ -422,16 +471,18 @@ class BookChatbot:
             responses.append(f"I found '{book.title}' by {book.authors[0]['name'] if book.authors else 'unknown author'}. What would you like to know about it? I can tell you about the price, description, availability, and more!")
         
         if len(responses) == 1:
-            return responses[0]
+            final_response = responses[0]
         else:
-            combined = " ".join(responses)
+            final_response = " ".join(responses)
             if random.random() > 0.5:
-                combined += " " + random.choice([
+                final_response += " " + random.choice([
                     "Is there anything else you'd like to know about this book?",
                     "Can I help you with anything else?",
                     "Would you like more details about anything specific?"
                 ])
-            return combined
+        
+        self.add_to_history('bot', final_response)
+        return final_response
 
     def suggest_books_from_query(self, query: str) -> str:
         db = get_db()

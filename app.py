@@ -2,7 +2,7 @@ from flask import Flask, render_template, jsonify, request
 from helpers import get_books_from_json, generate_random_rating,generate_random_price_and_stock
 from models.book import Book
 from flask_socketio import SocketIO, emit
-from bot import BookChatbot
+from bot.bot import BookChatbot
 from datetime import datetime
 from db import init_db, get_db
 

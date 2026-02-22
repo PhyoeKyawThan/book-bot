@@ -9,7 +9,8 @@ from nltk.corpus import stopwords
 from db import get_db
 from models.book import Book
 from nltk.stem import WordNetLemmatizer
-from flask import session
+from flask import session, request
+from datetime import datetime
 
 try:
     nltk.data.find('tokenizers/punkt')
@@ -112,8 +113,9 @@ class BookChatbot:
         history.append({
             'role': role,
             'message': message,
-            'timestamp': time.time()
+            'timestamp': datetime.now().isoformat()
         })
+        # Keep only last 20 messages to prevent session from getting too large
         if len(history) > 20:
             history = history[-20:]
         session['chat_history'] = history
@@ -125,13 +127,21 @@ class BookChatbot:
         if len(history) < 2:
             return ""
         
+        # Get last 3 exchanges for context
         recent = history[-6:] if len(history) > 6 else history
         context = []
         for entry in recent:
             role = "User" if entry['role'] == 'user' else "Bot"
             context.append(f"{role}: {entry['message']}")
         
-        return "\n".join(context[-3:]) 
+        return "\n".join(context[-3:])  # Last 1.5 exchanges
+
+    def is_follow_up_question(self, user_input: str) -> bool:
+        """Check if the current input is a follow-up question"""
+        follow_up_indicators = ['it', 'this', 'that', 'the book', 'tell me more', 
+                               'what about', 'and', 'also', 'more', 'details']
+        user_input_lower = user_input.lower()
+        return any(indicator in user_input_lower for indicator in follow_up_indicators)
 
     def preprocess_text(self, text: str) -> List[str]:
         text = text.lower()
@@ -142,6 +152,7 @@ class BookChatbot:
     def extract_book_from_query(self, query: str) -> Optional[Book]:
         db = get_db()
         
+        # Check for quoted titles first
         quoted_titles = re.findall(r'"([^"]*)"', query)
         for title in quoted_titles:
             cursor = db.execute(
@@ -154,6 +165,7 @@ class BookChatbot:
         
         tokens = self.preprocess_text(query)
         
+        # Try to find by title phrases
         for i in range(min(len(tokens), 4), 0, -1):
             for j in range(len(tokens) - i + 1):
                 possible_title = " ".join(tokens[j:j+i])
@@ -166,6 +178,7 @@ class BookChatbot:
                     if row:
                         return Book.from_row(row)
         
+        # Try to find by author
         for token in tokens:
             cursor = db.execute(
                 "SELECT * FROM books WHERE LOWER(authors) LIKE ? LIMIT 1",
@@ -175,6 +188,7 @@ class BookChatbot:
             if row:
                 return Book.from_row(row)
         
+        # Try to find by subject/genre
         for token in tokens:
             cursor = db.execute(
                 "SELECT * FROM books WHERE LOWER(subjects) LIKE ? LIMIT 1",
@@ -191,8 +205,8 @@ class BookChatbot:
         joined = " ".join(tokens)
         raw_lower = raw_text.lower()
 
-        context = self.get_context()
-        if "what about" in raw_lower and "last_book_id" in session:
+        # Check context for follow-up questions
+        if self.is_follow_up_question(raw_text) and 'last_book_id' in session:
             detected.append('description')
         
         for intent, keywords in self.intent_keywords.items():
@@ -273,7 +287,7 @@ class BookChatbot:
             similar_books = self.get_similar_books(book, limit=1)
             if similar_books:
                 return f"I don't have a description for '{book.title}', but it's similar to '{similar_books[0].title}' which is about {similar_books[0].summary[:150]}..."
-            return f"'{book.title}' is written by {book.authors[0]['name']} and fits in the {', '.join(book.subjects[:2])} genre."
+            return f"'{book.title}' is written by {book.authors[0]['name'] if book.authors else 'unknown author'} and fits in the {', '.join(book.subjects[:2])} genre."
 
     def generate_availability_response(self, book: Book) -> str:
         if book.stock > 0:
@@ -324,6 +338,7 @@ class BookChatbot:
                 ]
                 return random.choice(responses)
         
+        # Get top rated books
         cursor = db.execute(
             "SELECT * FROM books WHERE rating > 4.0 ORDER BY rating DESC LIMIT 3"
         )
@@ -346,6 +361,7 @@ class BookChatbot:
         similar_books = []
         seen_ids = {book.id}
         
+        # Try to find by same subjects
         for subject in book.subjects[:3]:
             cursor = db.execute(
                 "SELECT * FROM books WHERE subjects LIKE ? AND id != ? LIMIT ?",
@@ -360,6 +376,7 @@ class BookChatbot:
                     if len(similar_books) >= limit:
                         return similar_books
         
+        # Try to find by same author if we still need more
         if len(similar_books) < limit:
             for author in book.authors[:2]:
                 cursor = db.execute(
@@ -387,6 +404,7 @@ class BookChatbot:
             return random.choice(self.thanks_responses)
         
         if any(word in user_input_lower for word in ['bye', 'goodbye', 'exit', 'quit', 'see you']):
+            # Clear session on goodbye
             session.pop('chat_history', None)
             session.pop('last_book_id', None)
             return random.choice(self.goodbye_responses)
@@ -395,8 +413,7 @@ class BookChatbot:
             return "I'm BookBuddy, your personal book assistant! I'm here to help you discover great reads and answer questions about our book collection. 📚"
         
         if any(word in user_input_lower for word in ['help', 'what can you do', 'capabilities', 'features']):
-            capabilities = "\n".join([f"• {cap}: {desc}" for cap, desc in self.capability_details.items()])
-            return f"I can help you with lots of book-related things!\n\n{capabilities}\n\nJust ask me about any book or tell me what you're looking for!"
+            return self.capabilities_response()
         
         if any(phrase in user_input_lower for phrase in ['who made you', 'who created you', 'your creator']):
             return "I was created by a team of book-loving developers to make discovering new books easier and more fun!"
@@ -406,21 +423,23 @@ class BookChatbot:
     def generate_response(self, user_input: str) -> str:
         user_input = user_input.strip()
         
+        # Add user message to history
         self.add_to_history('user', user_input)
         
+        # Handle general conversation first
         general_response = self.handle_general_conversation(user_input)
         if general_response:
             self.add_to_history('bot', general_response)
             return general_response
         
+        # Extract book from query
         book = self.extract_book_from_query(user_input)
         if book:
             session['last_book_id'] = book.id
         
-        if 'last_book_id' in session and not book:
-            context = self.get_context()
-            if any(word in user_input.lower() for word in ['it', 'this', 'that', 'the book']):
-                book = Book.get_by_id(int(session['last_book_id']))
+        # If we have a previous book in session and this is a follow-up, use it
+        if 'last_book_id' in session and not book and self.is_follow_up_question(user_input):
+            book = Book.get_by_id(int(session['last_book_id']))
         
         tokens = self.preprocess_text(user_input)
         intents = self.detect_intent(tokens, user_input)
@@ -431,11 +450,19 @@ class BookChatbot:
             elif any(intent in ['capabilities', 'help'] for intent in intents):
                 response = self.capabilities_response()
             else:
-                responses = [
-                    f"I couldn't find that book. Did you mean one of these? {self.suggest_books_from_query(user_input)}",
-                    random.choice(self.no_book_found_responses)
-                ]
-                response = random.choice(responses)
+                # Check if they're asking about a previous book
+                if 'last_book_id' in session:
+                    last_book = Book.get_by_id(int(session['last_book_id']))
+                    if last_book:
+                        response = f"Were you asking about '{last_book.title}'? " + random.choice([
+                            "What would you like to know about it?",
+                            "I can tell you more about it if you'd like!",
+                            "Would you like to know the price, description, or availability?"
+                        ])
+                    else:
+                        response = random.choice(self.no_book_found_responses)
+                else:
+                    response = random.choice(self.no_book_found_responses)
             
             self.add_to_history('bot', response)
             return response
@@ -517,3 +544,12 @@ class BookChatbot:
             "• Provide shipping and format information\n\n"
             "Just ask me about any book you're interested in!"
         )
+
+    def get_chat_history(self) -> List[Dict]:
+        """Get the current chat history"""
+        return self.get_session_history()
+
+    def clear_history(self):
+        """Clear chat history"""
+        session.pop('chat_history', None)
+        session.pop('last_book_id', None)

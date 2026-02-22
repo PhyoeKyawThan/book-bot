@@ -1,23 +1,21 @@
 <!-- bot area -->
 <div id="chat-bot">
-    <div id="icon">
-        <img src="/static/images/icon.png" alt="" srcset="">
+  <div id="icon">
+    <img src="/static/images/icon.png" alt="" srcset="" />
+  </div>
+  <div id="chat-area">
+    <div id="close-chat-area">X</div>
+    <div id="chat-heading">
+      <div id="chat-avatar">
+        <img src="/static/images/icon.png" alt="" srcset="" />
+      </div>
+      <div id="chat-bot-name">
+        <div>Book Bot</div>
+        <div id="status" class="status-active">Active</div>
+      </div>
     </div>
-    <div id="chat-area">
-        <div id="close-chat-area">
-            X
-        </div>
-        <div id="chat-heading">
-            <div id="chat-avatar">
-                <img src="/static/images/icon.png" alt="" srcset="">
-            </div>
-            <div id="chat-bot-name">
-                <div>Book Bot</div>
-                <div id="status" class="status-active">Active</div>
-            </div>
-        </div>
-        <div id="chat-conversation">
-            <!-- <div class="message-from-bot">
+    <div id="chat-conversation">
+      <!-- <div class="message-from-bot">
                 <div class="avatar">
                     <img src="/static/images/icon.png" alt="" srcset="">
                 </div>
@@ -37,177 +35,230 @@
                 </div>
                 <div class="message">Who are u?Lore</div>
             </div> -->
-        </div>
-        <div id="chat-input">
-            <input type="text" name="" id="chat-input-box" placeholder="What can I help you, today?">
-            <button type="button" id="send-btn">
-                <img src="/static/images/paper-plane.png" alt="" srcset="">
-            </button>
-        </div>
     </div>
+    <div id="chat-input">
+      <input
+        type="text"
+        name=""
+        id="chat-input-box"
+        placeholder="What can I help you, today?"
+      />
+      <button type="button" id="send-btn">
+        <img src="/static/images/paper-plane.png" alt="" srcset="" />
+      </button>
+    </div>
+  </div>
 </div>
 <!-- bot area end -->
 <script src="{{ url_for('static', filename='js/socket.io.js') }}"></script>
 <script src="{{ url_for('static', filename='js/chat-socket.js') }}"></script>
 <script>
-    // const io = 
-    chat_socket.socket = io("/bot", {
-        autoConnect: false
-    });
-    const input = document.getElementById("chat-input-box");
-    const btn = document.getElementById("send-btn");
-    const conversation = document.getElementById("chat-conversation");
-    const status = document.getElementById("status");
-    const chatIcon = document.querySelector("#chat-bot #icon");
-    const chatArea = document.getElementById("chat-area");
-    const closeBtn = document.getElementById("close-chat-area");
+  chat_socket.socket = io("/bot", {
+    autoConnect: false,
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+  });
 
-    closeBtn.addEventListener("click", () => {
-        chatIcon.style.display = "block";
-        chatArea.style.display = "none";
-        chat_socket.close();
-    })
+  const input = document.getElementById("chat-input-box");
+  const btn = document.getElementById("send-btn");
+  const conversation = document.getElementById("chat-conversation");
+  const status = document.getElementById("status");
+  const chatIcon = document.querySelector("#chat-bot #icon");
+  const chatArea = document.getElementById("chat-area");
+  const closeBtn = document.getElementById("close-chat-area");
 
-    chatIcon.addEventListener("click", (e) => {
-        e.stopPropagation();
-        chatIcon.style.display = "none";
-        chatArea.style.display = "flex";
-        chat_socket.open();
-    });
+  let messageQueue = [];
+  let isProcessing = false;
 
-    document.addEventListener("click", () => {
-        chatIcon.style.display = "block";
-        chatArea.style.display = "none";
-        chat_socket.close();
-    });
+  closeBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    chatIcon.style.display = "block";
+    chatArea.style.display = "none";
+    chat_socket.close();
+  });
 
-    chatArea.addEventListener("click", (e) => {
-        e.stopPropagation();
-    });
+  chatIcon.addEventListener("click", (e) => {
+    e.stopPropagation();
+    chatIcon.style.display = "none";
+    chatArea.style.display = "flex";
+    chat_socket.open();
+  });
 
-    btn.addEventListener("click", () => {
-        const text = input.value.trim();
-        if (!text) return;
+  chatArea.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
 
-        sendMessage(text);
-        input.value = "";
-    });
+  btn.addEventListener("click", () => {
+    const text = input.value.trim();
+    if (!text) return;
 
-    input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-            e.preventDefault();
-            btn.click();
+    sendMessage(text);
+    input.value = "";
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      btn.click();
+    }
+  });
+
+  function statusActive() {
+    status.classList.remove("status-offline");
+    status.classList.add("status-active");
+    status.innerText = "Active";
+  }
+
+  function statusDisconnected() {
+    status.classList.add("status-offline");
+    status.classList.remove("status-active");
+    status.innerText = "Offline";
+  }
+
+  chat_socket.onConnect(() => {
+    statusActive();
+
+    if (!sessionStorage.getItem("chat_initialized")) {
+      sessionStorage.setItem("chat_initialized", "true");
+    }
+  });
+
+  chat_socket.onDisconnect(() => {
+    statusDisconnected();
+  });
+
+  chat_socket.socket.on("chat_init", (data) => {
+    if (data.history && data.history.length > 0) {
+      conversation.innerHTML = "";
+      data.history.forEach((entry) => {
+        if (entry.role === "user") {
+          addClientMessage(entry.message, false);
+        } else {
+          addBotMessage(entry.message, false);
         }
-    });
-
-    function statusActive() {
-        status.classList.remove("status-offline");
-        status.classList.add("status-active");
-        status.innerText = "Active";
+      });
     }
 
-    function statusDisconnected() {
-        status.classList.add("status-offline");
-        status.classList.remove("status-active");
-        status.innerText = "Offline";
+    if (data.response && data.history.length === 0) {
+      addBotMessage(data.response);
+    }
+  });
+
+  chat_socket.onMessage((data) => {
+    if (data?.is_typing) {
+      addTyping();
+      return;
     }
 
-    chat_socket.onConnect(() => {
-        statusActive();
-    });
+    removeTyping();
 
-    chat_socket.onDisconnect(() => {
-        statusDisconnected();
-    });
-
-    chat_socket.onMessage((data) => {
-        if (data?.is_typing) {
-            addTyping();
-            return;
-        }
-
-        removeTyping();
-        addBotMessage(data?.response || "");
-    });
-
-    function sendMessage(text) {
-        chat_socket.sendMessage(text);
-        addClientMessage(text);
+    if (data?.response) {
+      addBotMessage(data.response);
     }
+  });
 
-    function addClientMessage(text) {
-        const div = document.createElement("div");
-        div.className = "message-from-client";
-        div.innerHTML = `
+  function sendMessage(text) {
+    addClientMessage(text);
+
+    chat_socket.sendMessage(text);
+  }
+
+  function addClientMessage(text, saveToSession = true) {
+    const div = document.createElement("div");
+    div.className = "message-from-client";
+    div.innerHTML = `
         <div class="client-icon">
-            <img src="/static/images/client_icon.png" alt="">
+            <img src="/static/images/client_icon.png" alt="Client">
         </div>
         <div class="message">${escapeHTML(text)}</div>
     `;
-        conversation.appendChild(div);
-        scrollToBottom();
-    }
+    conversation.appendChild(div);
+    scrollToBottom();
+  }
 
-    function addTyping() {
-        if (document.getElementById("typing")) return;
+  function addTyping() {
+    if (document.getElementById("typing")) return;
 
-        const div = document.createElement("div");
-        div.id = "typing";
-        div.className = "message-from-bot typing";
-        div.innerHTML = `
+    const div = document.createElement("div");
+    div.id = "typing";
+    div.className = "message-from-bot typing";
+    div.innerHTML = `
         <div class="avatar">
-            <img src="/static/images/icon.png" alt="">
+            <img src="/static/images/icon.png" alt="Bot">
         </div>
-        <div class="message">Typing...</div>
+        <div class="message">
+            <span class="dot">.</span>
+            <span class="dot">.</span>
+            <span class="dot">.</span>
+        </div>
     `;
-        conversation.appendChild(div);
-        scrollToBottom();
-    }
+    conversation.appendChild(div);
+    scrollToBottom();
+  }
 
-    function removeTyping() {
-        const typing = document.getElementById("typing");
-        if (typing) typing.remove();
-    }
+  function removeTyping() {
+    const typing = document.getElementById("typing");
+    if (typing) typing.remove();
+  }
 
-    function addBotMessage(text) {
-        const div = document.createElement("div");
-        div.className = "message-from-bot";
-        div.innerHTML = `
+  function addBotMessage(text, saveToSession = true) {
+    const div = document.createElement("div");
+    div.className = "message-from-bot";
+    div.innerHTML = `
         <div class="avatar">
-            <img src="/static/images/icon.png" alt="">
+            <img src="/static/images/icon.png" alt="Bot">
         </div>
-        <div class="message">${escapeHTML(text)}</div>
+        <div class="message">${formatBotMessage(text)}</div>
     `;
-        conversation.appendChild(div);
-        scrollToBottom();
-    }
+    conversation.appendChild(div);
+    scrollToBottom();
+  }
 
-    function scrollToBottom() {
-        conversation.scrollTo({
-            top: conversation.scrollHeight,
-            behavior: "smooth"
-        });
-    }
+  function formatBotMessage(text) {
+    let formatted = text.replace(/\n/g, "<br>");
 
-    function escapeHTML(text) {
-        return text.replace(/[&<>"']/g, m => ({
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;"
-        }[m]));
-    }
+    formatted = formatted.replace(/•/g, "&bull;");
 
-    function openChat() {
-        chat_socket.open();
-    }
+    return formatted;
+  }
 
-    function closeChat() {
-        chat_socket.close();
-    }
+  function scrollToBottom() {
+    setTimeout(() => {
+      conversation.scrollTo({
+        top: conversation.scrollHeight,
+        behavior: "smooth",
+      });
+    }, 100);
+  }
 
-    window.addEventListener("beforeunload", () => {
-        chat_socket.close();
-    });
+  function escapeHTML(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function clearChat() {
+    if (confirm("Clear conversation history?")) {
+      conversation.innerHTML = "";
+      chat_socket.socket.emit("clear_history");
+      sessionStorage.removeItem("chat_initialized");
+    }
+  }
+
+  function addClearButton() {
+    const clearBtn = document.createElement("button");
+    clearBtn.id = "clear-chat";
+    clearBtn.innerHTML = "Clear Chat";
+    clearBtn.onclick = clearChat;
+    document.getElementById("chat-heading").appendChild(clearBtn);
+  }
+
+  window.addEventListener("beforeunload", () => {
+    chat_socket.close();
+  });
+
+  document.addEventListener("DOMContentLoaded", () => {
+    console.log("Chat interface ready");
+  });
 </script>

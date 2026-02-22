@@ -1,12 +1,15 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, session
 from helpers import get_books_from_json, generate_random_rating,generate_random_price_and_stock
 from models.book import Book
 from flask_socketio import SocketIO, emit
 from bot.bot import BookChatbot
-from datetime import datetime
+from datetime import datetime, timedelta
 from db import init_db, get_db
 
 app = Flask(__name__)
+app.config['SESSION_TYPE'] = 'filesystem'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
+app.config['SESSION_PERMANENT'] = True
 app.config['SECRET_KEY'] = "it'sasecret"
 socket = SocketIO(app=app)
 chatbot = BookChatbot()
@@ -49,6 +52,13 @@ def index():
     }
     return render_template("index.html", template_data = template_data) 
 
+# @app.route("/support")
+# def support():
+#     template_data = {
+#         "title": "Chat Support",
+#     }
+#     return render_template("support.html", template_data=template_data)
+
 @app.route("/book/<int:id>/view")
 def view(id: int):
     book = Book.get_by_id(id)
@@ -57,17 +67,48 @@ def view(id: int):
         # "book": book
     }
     return render_template("book_view.html", template_data = template_data, book = book)
+@socket.on("connect", namespace="/bot")
+def handle_connect():
+    """Handle client connection"""
+    print(f"Client connected to bot. Session ID: {request.sid}")
+    
+    if 'chat_history' in session and len(session['chat_history']) > 0:
+        emit("chat_init", {
+            "response": "Welcome back! How can I help you with books today? 📚",
+            "history": chatbot.get_chat_history()
+        })
+    else:
+        emit("chat_init", {
+            "response": chatbot.capabilities_response(),
+            "history": []
+        })
+
+@socket.on("disconnect", namespace="/bot")
+def handle_disconnect():
+    """Handle client disconnection"""
+    print(f"Client disconnected from bot. Session ID: {request.sid}")
 
 @socket.on("chat_open", namespace="/bot")
 def chat_open():
-    print("it was here")
-    emit("chat_init", {
-        "response": chatbot.capabilities_response()
-    })
+    """Handle chat open event"""
+    print("Chat opened")
+    history = chatbot.get_chat_history()
+    if history:
+        recent = history[-4:] 
+        emit("chat_init", {
+            "response": "Continuing our conversation...",
+            "history": recent
+        })
+    else:
+        emit("chat_init", {
+            "response": chatbot.capabilities_response(),
+            "history": []
+        })
 
 @socket.on("message", namespace="/bot")
 def handle_message(data):
     """
+    Handle incoming messages
     data example:
     {
         "message": "Tell me about Frankenstein"
@@ -75,15 +116,24 @@ def handle_message(data):
     """
     if not data or "message" not in data:
         emit("message", {
-            "response": "Invalid message format."
+            "response": "Invalid message format.",
+            "timestamp": datetime.now().isoformat()
         })
         return
+    
+    user_input = data["message"].strip()
+    if not user_input:
+        emit("message", {
+            "response": "Please type a message.",
+            "timestamp": datetime.now().isoformat()
+        })
+        return
+
     emit("message", {
         "is_typing": True,
-        "response": "Typing...",
         "timestamp": datetime.now().isoformat()
     })
-    user_input = data["message"]
+    
     bot_response = chatbot.generate_response(user_input)
 
     emit("message", {
@@ -91,16 +141,24 @@ def handle_message(data):
         "timestamp": datetime.now().isoformat()
     })
 
+@socket.on("clear_history", namespace="/bot")
+def clear_history():
+    """Clear conversation history"""
+    chatbot.clear_history()
+    emit("chat_init", {
+        "response": "Conversation history cleared. How can I help you?",
+        "history": []
+    })
 
 @app.route('/api/chat', methods=['POST'])
 def chat():
     data = request.json
-
+    
     if not data or 'message' not in data:
         return jsonify({'error': 'No message provided'}), 400
-
+    
     response = chatbot.generate_response(data['message'])
-
+    
     return jsonify({
         'response': response,
         'timestamp': datetime.now().isoformat()
